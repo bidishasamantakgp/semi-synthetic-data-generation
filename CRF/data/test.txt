@@ -1,0 +1,21 @@
+the DT B-NP
+Nikkei NNP I-NP
+index NN I-NP
+of IN B-PP
+225 CD B-NP
+selected VBN I-NP
+issues NNS I-NP
+was VBD B-VP
+up IN B-ADVP
+
+Rockwell NNP B-NP
+International NNP I-NP
+Corp. NNP I-NP
+'s POS B-NP
+Tulsa NNP I-NP
+unit NN I-NP
+said VBD B-VP
+it PRP B-NP
+signed VBD B-VP
+a DT B-NP
+

@@ -1,0 +1,35 @@
+London JJ B-NP
+shares NNS I-NP
+closed VBD B-VP
+moderately RB B-ADVP
+lower JJR I-ADVP
+in IN B-PP
+thin JJ B-NP
+trading NN I-NP
+London JJ B-NP
+shares NNS I-NP
+closed VBD B-VP
+moderately RB B-ADVP
+lower JJR I-ADVP
+in IN B-PP
+thin JJ B-NP
+trading NN I-NP
+. . O
+
+At IN B-PP
+Tokyo NNP B-NP
+, , O
+the DT B-NP
+Nikkei NNP I-NP
+index NN I-NP
+of IN B-PP
+225 CD B-NP
+selected VBN I-NP
+issues NNS I-NP
+was VBD B-VP
+up IN B-ADVP
+112.16 CD B-NP
+points NNS I-NP
+to TO B-PP
+35486.38 CD B-NP
+
