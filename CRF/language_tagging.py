@@ -167,9 +167,8 @@ if __name__ == "__main__":
     for i in range(len(X_test)):
      for x, y in zip(y_pred[i], [x[1].split("=")[1] for x in X_test[i]]):
     	print("%s (%s)" % (y, x))
-    '''
     # Create a mapping of labels to indices
-    labels = {"N": 1, "I": 0}
+    labels = {"EN": 1, "HI": 0, "OTHER": 2, "NE": 3}
 
     # Convert the sequences of tags into a 1-dimensional array
     predictions = np.array([labels[tag] for row in y_pred for tag in row])
@@ -178,5 +177,4 @@ if __name__ == "__main__":
     # Print out the classification report
     print(classification_report(
     truths, predictions,
-    target_names=["I", "N"]))
-    '''
+    target_names=["HI", "EN"]))
