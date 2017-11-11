@@ -2,6 +2,9 @@ import pycrfsuite
 import argparse
 import enchant
 from sklearn.model_selection import train_test_split
+from sklearn.model_selection import KFold
+from sklearn.metrics import classification_report
+import numpy as np 
 
 def get_idfdict(filename):
     freq_dict = defaultdict(int)
@@ -104,7 +107,7 @@ def word2features(doc,i):
 
 
 def extract_features(doc):
-    print "Extracting fetaures"
+    #print "Extracting fetaures"
     return [word2features(doc, i) for i in range(len(doc))]
 
 # A function fo generating the list of labels for each document
@@ -112,7 +115,7 @@ def get_labels(doc):
     return [label for (token, label) in doc]
 
 def train(X_train, Y_train):
-	trainer = pycrfsuite.Trainer(verbose=True)
+	trainer = pycrfsuite.Trainer(verbose=False)
 
 	# Submit training data to the trainer
 	for xseq, yseq in zip(X_train, Y_train):
@@ -151,30 +154,49 @@ if __name__ == "__main__":
 
     hparams = parseargument()
     data = preprocess(hparams.data_file)
-    print "Preprocess done", len(data[0])
+    #print "Preprocess done", len(data[0])
     X = [extract_features(doc) for doc in data]
     Y = [get_labels(doc) for doc in data]
-    print "Fetaure extraction done"
-    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2)
+    #print "Fetaure extraction done"
+    kf = KFold(n_splits=5)
+    i = 0
+    for train_index, test_index in kf.split(X):
+	#print train_index, test_index, X
+	
+    	X_train = [] 
+	X_test= []
+	Y_train= []
+	Y_test = []
+	for i in train_index:
+		X_train.append(X[i])
+		Y_train.append(Y[i])
+	for i in test_index:
+                X_test.append(X[i])
+                Y_test.append(Y[i])
+	#X[train_index], X[test_index], Y[train_index], Y[test_index]
+	#train_test_split(X, Y, test_size=0.2)
 
-    train(X_train, Y_train)
-    tagger = pycrfsuite.Tagger()
-    tagger.open('crf.model') 
-    y_pred = [tagger.tag(xseq) for xseq in X_test]
+    	train(X_train, Y_train)
+    	tagger = pycrfsuite.Tagger()
+    	tagger.open('crf.model') 
+    	y_pred = [tagger.tag(xseq) for xseq in X_test]
 
-    # Let's take a look at a random sample in the testing set
-    i = 12
-    for i in range(len(X_test)):
-     for x, y in zip(y_pred[i], [x[1].split("=")[1] for x in X_test[i]]):
-    	print("%s (%s)" % (y, x))
-    # Create a mapping of labels to indices
-    labels = {"EN": 1, "HI": 0, "OTHER": 2, "NE": 3}
+    	# Let's take a look at a random sample in the testing set
+    	'''
+	i = 12
+    	for i in range(len(X_test)):
+     		for x, y in zip(y_pred[i], [x[1].split("=")[1] for x in X_test[i]]):
+    			print("%s (%s)" % (y, x))
+    	'''
+	# Create a mapping of labels to indices
+    	labels = {"EN": 1, "HI": 0, "OTHER": 2, "NE": 3}
 
-    # Convert the sequences of tags into a 1-dimensional array
-    predictions = np.array([labels[tag] for row in y_pred for tag in row])
-    truths = np.array([labels[tag] for row in y_test for tag in row])
-
-    # Print out the classification report
-    print(classification_report(
-    truths, predictions,
-    target_names=["HI", "EN"]))
+    	# Convert the sequences of tags into a 1-dimensional array
+    	predictions = np.array([labels[tag] for row in y_pred for tag in row])
+    	truths = np.array([labels[tag] for row in Y_test for tag in row])
+	i = i + 1
+	print "i=", i
+    	# Print out the classification report
+    	print(classification_report(
+    	truths, predictions,
+    	target_names=["HI", "EN", "OTHER", "NE"]))

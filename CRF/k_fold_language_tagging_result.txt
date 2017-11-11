@@ -1,0 +1,50 @@
+i= 200
+             precision    recall  f1-score   support
+
+         HI       0.84      0.83      0.84       824
+         EN       0.89      0.93      0.91      1508
+      OTHER       0.95      0.94      0.95       479
+         NE       0.95      0.85      0.90       443
+
+avg / total       0.89      0.89      0.89      3254
+
+i= 400
+             precision    recall  f1-score   support
+
+         HI       0.83      0.86      0.84       827
+         EN       0.89      0.92      0.91      1520
+      OTHER       0.97      0.91      0.94       476
+         NE       0.95      0.85      0.90       421
+
+avg / total       0.90      0.89      0.89      3244
+
+i= 600
+             precision    recall  f1-score   support
+
+         HI       0.84      0.81      0.82       904
+         EN       0.87      0.93      0.90      1580
+      OTHER       0.97      0.93      0.95       454
+         NE       0.96      0.82      0.88       455
+
+avg / total       0.89      0.88      0.88      3393
+
+i= 800
+             precision    recall  f1-score   support
+
+         HI       0.85      0.84      0.85       886
+         EN       0.88      0.94      0.91      1611
+      OTHER       0.95      0.90      0.92       471
+         NE       0.95      0.82      0.88       453
+
+avg / total       0.89      0.89      0.89      3421
+
+i= 1000
+             precision    recall  f1-score   support
+
+         HI       0.85      0.74      0.79       921
+         EN       0.88      0.84      0.86      1653
+      OTHER       0.76      0.96      0.85       332
+         NE       0.67      0.90      0.77       307
+
+avg / total       0.84      0.83      0.83      3213
+
