@@ -1,0 +1,4 @@
+(ROOT (S (NP (NP (DT The) (JJ second) (NN election)) (PP (IN of) (NP (NNP Subhas) (NNP Chandra) (NNP Bose))) (PP (IN as) (NP (DT the) (NNP President))) (PP (IN against) (NP (NP (DT the) (NN desire)) (PP (IN of) (NP (NNP Mahatma) (NNP Gandhi))))) (PP (IN in) (NP (CD 1938)))) (VP (VBD created) (NP (DT a) (NN crisis)) (PP (IN in) (NP (DT the) (NNP Congress)))) (. .)))
+
+=====
+
