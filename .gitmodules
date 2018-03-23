@@ -1,0 +1,3 @@
+[submodule "emnlp2017-bilstm-cnn-crf"]
+	path = emnlp2017-bilstm-cnn-crf
+	url = https://github.com/bidishasamantakgp/emnlp2017-bilstm-cnn-crf.git
