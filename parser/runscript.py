@@ -5,15 +5,15 @@ import numpy as np
 with open(sys.argv[1],'r') as fen:
 	enlines = fen.readlines()
 
+indexlist = np.random.choice(range(len(enlines)), 2000)
 
-enlinesnew = np.random.choice(enlines, 2000)
+enlinesnew = [enlines[i] for i in indexlist] 
+#np.random.choice(enlines, 2000)
 enlines = enlinesnew
-#'''
 #sample file to store the samples
 with open(sys.argv[4], 'a') as fw:
-	for lines in enlines:
-		fw.write(lines.strip()+"\n")
-#'''
+	for (i,lines) in zip(indexlist, enlines):
+		fw.write(str(i) + "\t" + lines.strip()+"\n")
 
 for i in range(len(enlines)):
 #for i in range(2):

@@ -1,0 +1,1 @@
+python -m nmt.getembeddings_generic --segment_file ../data/segments.txt --model_dir /tmp/nmt_model_en_hi_devnagari_wordembed_all/ --sentence_prefix ../data/train --sample_sent ../data/sample.txt --output_file /tmp/code_mixed_eval1/output_attention_all.csv
