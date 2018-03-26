@@ -92,15 +92,20 @@ def create_model(
       skip_count_placeholder=skip_count_placeholder)
   #return (graph, model, iterator, skip_count_placeholder)
 def load_embeddings(endictfile,hidictfile):
-        with codecs.open(endictfile,'r', 'utf-8') as f:
-        #with open(endictfile,'r') as f:
-                #print(f.read())
-                endict = json.loads(f.read())
-        with codecs.open(hidictfile, encoding='utf-8') as f:
-        #with open(hidictfile) as f: 
-        #with open(hidictfile, 'r') as f:
-                #print(f.read())
-                hidict = json.loads(f.read())
+	
+	endict = defaultdict()
+	hidict = defaultdict()
+        
+	with codecs.open(endictfile,'r', 'utf-8') as f:
+                for line in f:
+			tokens = line.split()
+			endict[tokens[0]] = [float(x) for x in tokens[1:]]
+        
+	with codecs.open(hidictfile, encoding='utf-8') as f:
+		for line in f:
+			tokens = line.split()
+			hidict[tokens[0]] = [float(x) for x in tokens[1:]]
+		
         return (endict,hidict)
 
 
@@ -165,13 +170,15 @@ def calculate_emd(hidict, endict, ensentence, hindisentence, probdict, idf_dict,
 				#distance[en][hi] = 1 - probdict[yin[hi],0][xin[en]]*(1.0/idf_dict[ensentence[xin[en]]]+1)
                         except:
                                 distance[en][hi] = 1
-        #print("Debug dist", distance)
-	#print('ENG',np.array(x).shape, 'Hndi', np.array(y).shape)
+        print("Debug dist", distance)
+	print('ENG',np.array(x).shape, 'Hndi', np.array(y).shape)
         distVal= 99
-        if len(y) > 0 and len(x)> 0:
+        
+	if len(y) > 0 and len(x)> 0:
                 #print("correct", ensentence)
                 #distVal = emd(np.array(x),np.array(y), D=distance) 
 		#* hi_idf/en_idf 
+		
 		distVal = emd(np.array(x),np.array(y), D=distance) 
 		#* abs(en_idf - hi_idf)/en_idf
 		#* (en_idf/(hi_idf+1))
@@ -268,8 +275,7 @@ def translate(query, src, tgt):
         #print("retlist",retlist)
 	return new_data
 	
-def getembeddings(hparams,segments, engsentence, hindisentence, idf_dict, idf_dict_hi, endict, hidict,scope=None, target_session="", single_cell_fn=None):
-#def getembeddings(hparams, scope=None, target_session="", single_cell_fn=None):
+def getembeddings(hparams,segments, engsentence, hindisentence, idf_dict, idf_dict_hi, endict, hidict, output_file, scope=None, target_session="", single_cell_fn=None):
   """Train a translation model."""
   log_device_placement = hparams.log_device_placement
   out_dir = hparams.out_dir
@@ -302,15 +308,8 @@ def getembeddings(hparams,segments, engsentence, hindisentence, idf_dict, idf_di
   sess.run(
       train_model.iterator.initializer,
       feed_dict={train_model.skip_count_placeholder: 0})
-  #print("iterator soucre", iterator.source.eval(session=sess), iterator.source.shape) 
   step_result = loaded_model.getembeddings(sess)
   encoder_outputs, decoder_outputs, encoder_inputs, decoder_inputs, history = step_result
-  #print("encoder input shape",encoder_inputs.shape)
-  #print(encoder_inputs)
-  #print("decoder input shape",decoder_inputs.shape)
-  #print(decoder_inputs)
-  #print("decoder_outputs_shape",decoder_outputs.rnn_output.shape)
-  #print("history_shape",history.shape)
   enlen = len(engsentence)
 
   hindilen = len(hindisentence)
@@ -324,48 +323,23 @@ def getembeddings(hparams,segments, engsentence, hindisentence, idf_dict, idf_di
 		  segmentlist = segment.replace('-LSB-','[').replace('-RSB-',']').strip().split()
 		  if len(segmentlist) == enlen:
 			continue
-		  #print("DEBUG",segmentlist, engsentence)
 		  random_seed1 = -1
-		  try:
-			random_seed1 = engsentence.index(segmentlist[0])
-		  except:
-			for w in segmentlist:
-		  		for el in range(len(engsentence)):
-					if(w in engsentence[el]):
-						random_seed1 = el
-						break
-				if(random_seed1!=-1):
-					break 
+		  random_seed1 = engsentence.index(segmentlist[0])
 		  random_seed2 = -1
-		  try:
-		   random_seed2 = engsentence[random_seed1+1:].index(segmentlist[-1])+random_seed1 + 1
-		  except:
-			temp = copy.copy(segmentlist)
-			temp.reverse()
-			for w in temp:
-		   		for el in reversed(range(random_seed1, len(engsentence))):
-                        		#print("Debug w", w)
-					if(w in engsentence[el]):
-					
-		   				random_seed2 = el
-						break
-				if(random_seed2!=-1):
-                                        break
-
+		  reverselist = copy.copy(engsentence)
+                  reverselist.reverse()
+                  random_seed2 = enlen - reverselist.index(segmentlist[-1]) - 1
 			 			
-		  #print("DEBUG",segmentlist, engsentence, random_seed1, random_seed2)
 		  mapping = ''
   		  hindisegment = ''
 		  indexlist = []
 		  newenglishsentence = copy.copy(engsentence)
 		  newhindisentence = copy.copy(hindisentence)
 		  segment_dict = defaultdict() 
-                  #for l in range(1,max(len(segmentlist),hindilen-1) + 1):
                   for l in range(1,max(len(segmentlist),hindilen-1) + 1):   
 		     for k in range(hindilen - l):
                         j = min(k + l , hindilen-1) 
 			mapping = ''
-                  	#hindisegment = ''
                   	indexlist = []
                   	newenglishsentence = copy.copy(engsentence)
                   	newhindisentence = copy.copy(hindisentence)
@@ -387,108 +361,101 @@ def getembeddings(hparams,segments, engsentence, hindisentence, idf_dict, idf_di
 			#score +=emd_out * 1.0 /(hindilen + 1.0-(j+1 -k))
 			#/(enlen+1-(random_seed2 +1 - random_seed1)))
                         newsentence = [' '.join(engsentence[0:max(0,random_seed1)]), ' '.join(hindisentence[k:j+1]), ' '.join(engsentence[random_seed2+1:])]
-                        segment_dict[' '.join(newsentence)] = (score, emd_in, emd_out)
+                        segment_dict[' '.join(newsentence)] = (score, emd_in, emd_out, random_seed1 - 1, enlen - random_seed2 - 1, k, j)
 		  newenglishsentence[random_seed1:random_seed2+1] = [x.upper() for x in newenglishsentence[random_seed1: random_seed2+1]]
           	  sorted_candidates = sorted(segment_dict.items(), key=operator.itemgetter(1,0))
-          	  #with codecs.open("/tmp/output_attention_emd_all.csv",'a','utf-8') as csvfile:
-		  #with codecs.open("/tmp/output_attention_emd_test_new1.csv",'a','utf-8') as csvfile:
-		  with codecs.open("/tmp/code_mixed_eval/output_attention_emd.csv",'a','utf-8') as csvfile:
-		  #with open("/tmp/output_attention_emd_all.csv",'a') as csvfile:
-
-                        for (candidate, (score, score_in, score_out)) in sorted_candidates[:10]:
-                                csvfile.write(' '.join(hindisentence)+'\t'+' '.join(newenglishsentence)+'\t'+candidate+'\t'+str(score)+'\t'+str(score_in)+'\t'+str(score_out)+'\n')
+		  with codecs.open(output_file,'a','utf-8') as csvfile:
+                        for (candidate, (score, score_in, score_out, rs1, rs2, k, j)) in sorted_candidates[:10]:
+                                csvfile.write(' '.join(hindisentence)+'\t'+' '.join(newenglishsentence)+'\t'+candidate+'\t'+str(score)+'\t'+str(score_in)+'\t'+str(score_out)+'\t'+str(rs1)+'\t'+str(rs2)+'\t'+str(k)+'\t'+str(j)+'\n')
                         csvfile.write("\n")
 
-def getsegment(segment_file):
-    i = 0
+def getsegment(segment_file, englist):
     map_dict = defaultdict()
     listenglish = []
     listhindi = []
     listsegment = []
-    english_sample = []
     englishlist = []
     hindilist = []
-    with codecs.open(segment_file, 'r', 'utf-8') as f:
-    #with open(segment_file, 'r') as f:
+    with open(segment_file, 'r') as f:
         lines = f.readlines()
-        for line in lines:
-                tokens = line.split('\t')
-                if len(tokens)<3:
-			continue
-		segment_sr = ast.literal_eval(tokens[0].strip())
-                englishwords = tokens[1].split()
+        for (line, engsent) in zip(lines[:100], englist):
+                tokens = line.strip()
+                segment_sr = ast.literal_eval(tokens)
+                list_temp = []
+                englishwords = engsent.split()
                 for seg in segment_sr:
-                        if len(seg.split()) <= len(englishwords)/2 and len(seg.split())>= len(englishwords)/4 :
-                                listsegment.append(seg)
-                listsegment = listsegment[:min(10, len(listsegment))]
+                        #if (len(seg.split()) <= len(englishwords)*1.0/2 ) and (len(seg.split())>= len(englishwords)*1.0/4) :
+                        list_temp.append(seg)
+                list_temp = list_temp[:min(10, len(list_temp))]
 
-		#listsegment.append(segment_sr)
-                englishlist.append(tokens[1].replace(' \'','\'').replace('-LSB-',']').replace('-RSB-',']').strip())
-                hindilist.append(tokens[2].strip())
-    return (listsegment, englishlist, hindilist)
+                listsegment.append(list_temp)
+    return listsegment
+
+def getsentences(filename):
+        f = codecs.open(filename, encoding='utf-8')
+        srcsenlist = []
+        tgtsenlist = []
+
+        for line in f.readlines()[:100]:
+                tokens = line.split("|||")
+                #print(tokens)
+		src = tokens[0].replace('\'', " \'").replace('.', ' .').replace('-LSB-','[').replace('-RSB-',']')
+		#src = tokens[0].split("\t")[1].strip().replace('\'', " \'").replace('.', ' .').replace('-LSB-','[').replace('-RSB-',']')
+                tgt = tokens[1].strip()
+                srcsenlist.append(src.strip())
+                tgtsenlist.append(tgt.strip())
+        return (srcsenlist, tgtsenlist)
+
 
 def parsearguments():
         parser = argparse.ArgumentParser(
                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         parser.add_argument('--segment_file', type=str, default='segment.txt',
                         help='file to store the segmentation information genearted by a grammar')
-        #parser.add_argument('--stop_words', type=str, default='stopwords-hi.txt',
-        #                help='file containing the stop words')
-        parser.add_argument('--english_sentence', type=str, default='english_senetence.txt',
-                        help='file containing the stop words')
-        hparams = parser.parse_args()
+        parser.add_argument('--model_dir', type=str, default='model/',
+                        help='directory which has the trained model')
+        parser.add_argument('--sentence_prefix', type=str, default='sentence',
+                        help='file containing the corpus')
+        parser.add_argument('--sample_sent', type=str, default='sample.txt',
+                        help='file containing the corpus')
+        parser.add_argument('--output_file', type=str, default='sample.txt',
+                        help='output to be stored')
+        parser.add_argument('--embedding_prefix', type=str, default='embedding',
+                        help='multilingual word embedding')
+	hparams = parser.parse_args()
         return hparams
 
 #def main_embeddings(hparams, scope=None, target_session="", single_cell_fn=None):
 if __name__=="__main__":
-      #out_dir = "/tmp/nmt_model_en_hi_devnagari_wordembed_all/" 
-      #out_dir = "/tmp/nmt_model_en_hi_devnagari_wordembed_wordpiece_old/"
-      out_dir = "/tmp/nmt_model_en_es_all/"
+      hparams_local = parsearguments()
+      out_dir = hparams_local.model_dir
       hparams = utils.load_hparams(out_dir)
+
       hparams.num_embeddings_partitions = 0
       hparams.get_embeddings = True
+      sentence = hparams_local.sentence_prefix
+      idf_dict = get_idfdict(sentence + "." + hparams.src)
+      idf_dict_hi = get_idfdict(sentence + "." + hparams.tgt)
 
-      #parsearguments()
-      dict_file = "/home/rs/bidisha/TF/code/nmt_alignments_final/data/wordembed"
-      #dict_file = "/home/rs/bidisha/basava/wordembed"
-      #dict_file = "/home/rs/bidisha/"
-      (endict, hidict) = load_embeddings(dict_file+'_en.txt', dict_file+'_es.txt') 
-      
 
-      idf_dict = get_idfdict(hparams.train_prefix+".en")
-      idf_dict_hi = get_idfdict(hparams.train_prefix+".es")
+      dict_file = hparams_local.embedding_prefix
+      (endict, hidict) = load_embeddings(dict_file+"."+hparams.src, dict_file+"."+hparams.tgt) 
+      print('endict', endict['the']) 
       hparams.train_prefix = hparams.train_prefix.replace("train", "test")
       
-      #segment_file = "/home/rs/bidisha/giza++/data/converted_segment.txt" 
-      #segment_file = "/home/rs/bidisha/TF/data/translation/evaluation/SR_pair.txt"
-      #segment_file = "/home/rs/bidisha/TF/data/translation/evaluation/converted_SR_pair.txt"
-      segment_file = "/home/rs/bidisha/TF/code/corenlp/CoreNLP/en_es/evaluation.txt"
-      #segment_file = "/home/rs/bidisha/giza++/data/segment_test.txt"
-      (listsegment, englist, hilist) = getsegment(segment_file)
+      segment_file = hparams_local.segment_file
+      (englist, hilist) = getsentences(hparams_local.sample_sent)
+      listsegment = getsegment(segment_file, englist)
+      output_file = hparams_local.output_file
       count = 0
       i = 0
       for (segments, engsentence, hindisentence) in zip(listsegment, englist, hilist):
-                #print("inside getemb", count)
-                #engsentence = engsentence.split()
-		#hindisentence = hindisentence.split()
-		#if engsentence
-		'''
-                with codecs.open('/tmp/nmt_data_en_hi_devnagari_wordpiece/test.en', 'w', 'utf-8') as f:
-		#with codecs.open('/tmp/nmt_data_en_hi_devnagari_all/test.en', 'w', 'utf-8') as f:
-		#with open('/tmp/nmt_data_en_hi_devnagari_all/test.en', 'w') as f:
-                	f.write(engsentence+'\n')
-		with codecs.open('/tmp/nmt_data_en_hi_devnagari_wordpiece/test.hi', 'w', 'utf-8') as f:
-		#with codecs.open('/tmp/nmt_data_en_hi_devnagari_all/test.hi', 'w', 'utf-8') as f:
-        	#with open('/tmp/nmt_data_en_hi_devnagari_all/test.hi', 'w') as f:
-                	f.write(hindisentence+'\n')
-        	#with open('/tmp/nmt_data_en_hi_devnagari_all/segment_file', 'w') as f:
-                #	f.write(+'\n')		
-                '''
-		with open(hparams.train_prefix+".en", 'w') as f:
+ 		print(segments, engsentence, hindisentence)
+		with codecs.open(hparams.train_prefix+"."+hparams.src, 'w', encoding='utf-8') as f:
                         f.write(engsentence+'\n')
-                with open(hparams.train_prefix+".es", 'w') as f:
+                with codecs.open(hparams.train_prefix+"."+hparams.tgt, 'w', encoding='utf-8') as f:
                         f.write(hindisentence+'\n')
-
-		getembeddings(hparams, segments, engsentence.split(), hindisentence.split(), idf_dict, idf_dict_hi, endict, hidict)
-		#break
-
+		getembeddings(hparams, segments, engsentence.split(), hindisentence.split(), idf_dict, idf_dict_hi, endict, hidict, hparams_local.output_file)
+		count += 1
+		if count == 2:
+			break
