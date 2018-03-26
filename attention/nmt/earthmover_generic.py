@@ -72,6 +72,14 @@ def parsearguments():
                         help='file to store the segmentation information genearted by a grammar')
 	parser.add_argument('--dict_file', type=str, default='dict.txt',
                         help='file to store the embedding')
+	parser.add_argument('--out_file', type=str, default='dict.txt',
+                        help='outputfile to store the embedding')
+	parser.add_argument('--src', type=str, default='en',
+                        help='src language')
+	parser.add_argument('--tgt', type=str, default='hi',
+                        help='target file')
+
+
 	hparams = parser.parse_args()
 	return hparams
 
@@ -110,10 +118,10 @@ def getembeddings(hparams, en_dict, hi_dict, segment_sr, engsentence, hindisente
 		  if len(segmentlist) == enlen:
                         continue
 		  random_seed1 = engsentence.index(segmentlist[0])
-		  try:
-		   random_seed2 = engsentence.index(segmentlist[-1])
-		  except:
-		   random_seed2 = enlen - 1 			
+		  reverselist = copy.copy(engsentence)
+                  reverselist.reverse()
+                  random_seed2 = enlen - reverselist.index(segmentlist[-1]) - 1
+
 		  segment_dict = defaultdict(defaultdict)
 		  for l in range(1,max(len(segmentlist),hindilen-1) + 1):
                      for k in range(hindilen - l):
@@ -141,22 +149,22 @@ def getembeddings(hparams, en_dict, hi_dict, segment_sr, engsentence, hindisente
 			newenglishsentence[random_seed1:random_seed2+1] = [x.upper() for x in newenglishsentence[random_seed1: random_seed2+1]]
                   	newsentence = [' '.join(engsentence[0:max(0,random_seed1)]), ' '.join(hindisentence[k:j+1]), ' '.join(engsentence[random_seed2+1:])]
 			#segment_dict[' '.join(newsentence)] = (emd_in+emd_out_left+emd_out_right, emd_in, emd_out_left, emd_out_right)
-			segment_dict[' '.join(newsentence)] = (emd_in+emd_out, emd_in, emd_out)
+			segment_dict[' '.join(newsentence)] = (emd_in+emd_out, emd_in, emd_out, random_seed1 - 1, enlen - random_seed2 - 1, k, j)
 
 		  newenglishsentence[random_seed1:random_seed2+1] = [x.upper() for x in newenglishsentence[random_seed1: random_seed2+1]]
 		  # ascending order sorting
 		  sorted_candidates = sorted(segment_dict.items(), key=operator.itemgetter(1,0))
 		  #getsortedlist(segment_dict)
-                  with codecs.open("/tmp/code_mixed_eval/output_emd_euclidean_test.csv",'a','utf-8') as csvfile:
-                        for (candidate, (score, emdin, emdout)) in sorted_candidates[:10]:
-                                csvfile.write(' '.join(hindisentence)+'\t'+' '.join(newenglishsentence)+'\t'+candidate+ '\t'+str(score)+'\t'+str(emdin)+'\t'+str(emdout)+'\n')
+                  with codecs.open(hparams.output_file,'a','utf-8') as csvfile:
+                        for (candidate, (score, emdin, emdout, rs1, rs2, k, j)) in sorted_candidates[:10]:
+                                csvfile.write(' '.join(hindisentence)+'\t'+' '.join(newenglishsentence)+'\t'+candidate+ '\t'+str(score)+'\t'+str(emdin)+'\t'+str(emdout)+'\t'+ str(rs1)+"\t"+str(rs2)+"\t"+str(k)+'\t'+str(j)+'\n')
 			csvfile.write("\n")
                 
 
 
 if __name__=="__main__":
 	hparams = parsearguments()
-	(endict, hidict) = loaddict(hparams.dict_file+'_en.txt', hparams.dict_file+'_hi.txt')	
+	(endict, hidict) = loaddict(hparams.dict_file+'_'+hparams.src+'.txt', hparams.dict_file+'_'+hparams.tgt+'.txt')	
 	#print(hidict.keys())
   	with codecs.open(hparams.segment_file, 'r', "utf-8") as f:
         	lines = f.readlines()
@@ -165,9 +173,4 @@ if __name__=="__main__":
         	segment_sr = ast.literal_eval(tokens[0])
 		engsentence = tokens[1].strip().split()
 		hindisentence = tokens[2].strip().split()
-		try:
-			getembeddings(hparams, endict, hidict, segment_sr, engsentence, hindisentence)
-		except:
-			continue
-		#with codecs.open("/tmp/output_emd_evaluation1.csv",'a','utf-8') as csvfile:
-		#	csvfile.write("\n")	
+		getembeddings(hparams, endict, hidict, segment_sr, engsentence, hindisentence)
