@@ -1,6 +1,3 @@
-
-from translatetransliterate_util import * 
-
 import urllib2
 import urllib
 import sys
@@ -9,24 +6,48 @@ import ast
 import re
 import time
 import argparse
-import enchant
+from transliterate_util import *
+from collections import defaultdict
 
 def parseargument():
  	parser = argparse.ArgumentParser(
                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-        parser.add_argument('--source_lang', type=str, default='en',
-                        help='source language hi, en')
-        parser.add_argument('--target_lang', type=str, default='hi',
-                        help='target language to be converted en, hi')
-	parser.add_argument('--file_name', type=str, default='hi',
-                        help='file to be converted en, hi')
-        parser.add_argument('--out_file', type=str, default='out',
+ 	parser.add_argument('--synthetic_file', type=str, default='attention.csv',
+                        help='synthetic_file which stores the synthetic sentences')
+ 	parser.add_argument('--align_file', type=str, default='forward.align',
+                        help='file which stores the alignment')
+ 	parser.add_argument('--pos_file', type=str, default='POS.csv',
+                        help='stores the POS tagged file')
+ 	parser.add_argument('--out_file', type=str, default='out',
                         help='file to be written')
+ 	parser.add_argument('--source_lang', type=str, default='en',
+                        help='source language hi, en')
+ 	parser.add_argument('--target_lang', type=str, default='hi',
+                        help='target language to be converted en, hi')
 	args = parser.parse_args()
 	return args
 
+# the format is <linenumber>, <hindi>, <english>, <codemixed>, <scroes>* , <ens>, <ene>, <his>, <hie>
+def getSynthetic(filename):
+	indexlist = []
+	englishpos = defaultdict()
+	hindipos = defaultdict()
+	codemixed = defaultdict()
+
+	with codecs.open(filename, encoding='utf-8') as f:
+		for line in f:
+			tokens = line.split("\t")
+			print "tokens", tokens
+			index = int(tokens[0])
+			indexlist.append(index)
+			hindipos[index] = [int(tokens[-2]), int(tokens[-1])]
+			englishpos[index] = [int(tokens[-4]), int(tokens[-3])]
+			codemixed[index] = tokens[3].split()
+	
+	return (indexlist, englishpos, hindipos, codemixed)
+
 def getAlignDict(filename, linenumberlist):
-	f = open(filename)
+	f = codecs.open(filename, encoding='utf-8')
 	lines = f.readlines()
 	align_dict = defaultdict(defaultdict)
 
@@ -46,53 +67,63 @@ def getPosDict(filename, linenumberlist):
 	pos_dict = defaultdict(defaultdict)
 	for i in linenumberlist:
                 line = lines[i]
-                tokens = line.split()
+                tokens = line.split("\n")
                 temp_dict = defaultdict()
-                
-		for token in tokens:
-                        [word,pos] = token.split("\t")
-                        temp_dict[word] = pos
+                for j in range(len(tokens)):
+                        [word,pos] = tokens[j].split("\t")
+                        temp_dict[j] = pos
                 pos_dict[i] = temp_dict
 	return pos_dict
 
-def alignPOS(datafile, codemixed):
-	flines = open(filename).readlines()
-	linenumberlist = []
+def alignPOS(indexlist, codemixed, pos_dict, align_dict, englishpos, hindipos, outfile):
 
-	for line in flines:
-		tokens = line.split("|||")
-		[linenumber, src] = tokens[0].split("\t")
-		tgt = tokens[1].strip()
-		src = src.strip()
+	for i in indexlist:
+		pos_sent = pos_dict[i]
+		align_sent = align_dict[i]
 
-		linenumberlist.append(linenumber)
-	
-	align_dict = getAlignDict(filename, linenumberlist)
- 	pos_dict = getPosDict(filename, linenumberlist)	
+		[e_st, e_end] = englishpos[i]
+		[hi_st, hi_end] = hindipos[i]
+
+		codemixedsent = codemixed[i]
+		l = len(codemixedsent)
+		k = hi_st
 		
-	with open() as f:
-		candidates = f.read().split("=====")
-		for candidate in candidates:
-			tokens = 		
+		#print codemixedsent
+		hindi_segment = ' '.join(word for word in codemixedsent[e_st+1: e_st + 1 + (hi_end - hi_st + 1)])
+		#print "hindi_segment", hindi_segment
+		hparams.data = hindi_segment
+		transliterated = transliterate(hparams)[0].split()
+		#print "transliterated", transliterated
+		#hi_seg_len = hi_end - hi_st
+
+		for j in range(len(codemixedsent)):
+			if j <= e_st or j >= (l - e_end):
+				with codecs.open(outfile, 'a', encoding='utf-8') as fw:
+					fw.write(codemixedsent[j] + '\t' + 'EN' + '\t' + pos_sent[j]+'\n') 
+			else:
+				with codecs.open(outfile, 'a', encoding='utf-8') as fw:
+					#fw.write(codemixed[j] + '\t' + 'HI' + '\t' + pos_sent[align_sent[k]])
+					fw.write(transliterated[k - hi_st] + '\t' + 'HI' + '\t' + pos_sent[align_sent[k]]+'\n')
+				#print codemixed[j], pos_sent[align_sent[k]]
+				k += 1
+ 		with codecs.open(outfile, 'a', encoding='utf-8') as fw:
+			fw.write("\n")
 
 if __name__=="__main__":
-	args = parseargument()
-	d = enchant.Dict("en_US")
-	
-	fw = open(args.out_file, 'a')
-	f = open(args.file_name)
-	
-	for line in f:
-		line = line.strip()
-		if len(line) == 0:
-			fw.write("\n")
-			continue
-		[word, tag] = line.split()
-		transword = word
-		if not d.check(word):
-			args.data=word
-			temp = transliterate(args) 
-			if len(temp) > 0:
-				transword = temp[0]
-		fw.write(transword+" "+tag+"\n")
-	#'''
+
+	hparams = parseargument()
+	indexlist, englishpos, hindipos, codemixed  = getSynthetic(hparams.synthetic_file)
+	align_dict = getAlignDict(hparams.align_file, indexlist)
+	pos_dict = getPosDict(hparams.pos_file, indexlist)
+        
+	#print "Debug calculations"
+	#print "indexlist", indexlist
+	#print "englishpos", englishpos
+	#print "hindipos", hindipos
+	#print "codemix", codemixed		
+	#print "aligndict", align_dict
+	#print "pos_dict", pos_dict
+
+	alignPOS(indexlist, codemixed, pos_dict, align_dict, englishpos, hindipos, hparams.out_file)
+	#Assume that we have tagged english POS tagged
+
