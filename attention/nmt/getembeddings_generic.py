@@ -227,7 +227,8 @@ def getembeddings(hparams,segments, engsentence, hindisentence, idf_dict, idf_di
   name = -1
   
   for segment in segments:
-		  segmentlist = segment.replace('-LSB-','[').replace('-RSB-',']').strip().split()
+		  #segmentlist = segment.replace('-LSB-','[').replace('-RSB-',']').strip().split()
+		  segmentlist = segment.strip().split()
 		  if len(segmentlist) == enlen:
 			continue
 		  
@@ -369,7 +370,8 @@ if __name__=="__main__":
       hparams_local = parsearguments()
       out_dir = hparams_local.model_dir
       hparams = utils.load_hparams(out_dir)
-	 
+      hparams.src_max_len = 300
+      hparams.tgt_max_len = 300 
       hparams.num_embeddings_partitions = 0
       hparams.get_embeddings = True
       sentence = hparams_local.sentence_prefix 
