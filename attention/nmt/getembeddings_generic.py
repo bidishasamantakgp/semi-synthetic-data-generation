@@ -175,7 +175,7 @@ def score(hindisentence, hindisegments, enlen):
 	return sc
 
 	
-def getembeddings(hparams,segments, engsentence, hindisentence, idf_dict, idf_dict_hi, output_file, scope=None, target_session="", single_cell_fn=None):
+def getembeddings(hparams,segments, engsentence, hindisentence, idf_dict, idf_dict_hi, output_file, index, scope=None, target_session="", single_cell_fn=None):
 #def getembeddings(hparams, scope=None, target_session="", single_cell_fn=None):
   """Train a translation model."""
   log_device_placement = hparams.log_device_placement
@@ -307,9 +307,9 @@ def getembeddings(hparams,segments, engsentence, hindisentence, idf_dict, idf_di
 		  newenglishsentence[random_seed1:random_seed2+1] = [x.upper() for x in newenglishsentence[random_seed1: random_seed2+1]]
           	  sorted_candidates = sorted(segment_dict.items(), key=operator.itemgetter(1,0), reverse=True)
 		  with open(output_file,'a') as csvfile:
-                        for (candidate, (score, accuracy, overlist, rs1, rs2, k, j)) in sorted_candidates[:10]:
-                                csvfile.write(' '.join(hindisentence)+'\t'+' '.join(newenglishsentence)+'\t'+candidate+'\t'+str(score)+'\t'+str(rs1)+'\t'+str(rs2)+'\t'+str(k)+'\t'+str(j)+'\n')
-                        csvfile.write("\n")
+                        for (candidate, (score, accuracy, overlist, rs1, rs2, k, j)) in sorted_candidates[:1]:
+                                csvfile.write(str(index)+'\t'+' '.join(hindisentence)+'\t'+' '.join(newenglishsentence)+'\t'+candidate+'\t'+str(score)+'\t'+str(rs1)+'\t'+str(rs2)+'\t'+str(k)+'\t'+str(j)+'\n')
+                        #csvfile.write("\n")
 
 def getsegment(segment_file, englist):
     map_dict = defaultdict()
@@ -320,7 +320,7 @@ def getsegment(segment_file, englist):
     hindilist = []
     with open(segment_file, 'r') as f:
         lines = f.readlines()
-        for (line, engsent) in zip(lines[:100], englist):
+        for (line, engsent) in zip(lines, englist):
 		tokens = line.strip()
 		segment_sr = ast.literal_eval(tokens)
 		list_temp = []
@@ -337,14 +337,16 @@ def getsentences(filename):
 	f = open(filename)
 	srcsenlist = []
 	tgtsenlist = []
-
-	for line in f.readlines()[:100]:
+	indexlist = []
+	for line in f.readlines():
 		tokens = line.split("|||")
-		src = tokens[0].split("\t")[1].strip().replace('\'', " \'").replace('.', ' .').replace('-LSB-','[').replace('-RSB-',']')
+		indexlist.append(int(tokens[0].split("\t")[0]))
+                src = tokens[0].split("\t")[1]
+		#src = tokens[0].split("\t")[1].strip().replace('\'', " \'").replace('.', ' .').replace('-LSB-','[').replace('-RSB-',']')
 		tgt = tokens[1].strip()
 		srcsenlist.append(src.strip())
 		tgtsenlist.append(tgt.strip())
-	return (srcsenlist, tgtsenlist)
+	return (srcsenlist, tgtsenlist, indexlist)
 
 def parsearguments():
         parser = argparse.ArgumentParser(
@@ -357,7 +359,7 @@ def parsearguments():
                         help='file containing the corpus')
 	parser.add_argument('--sample_sent', type=str, default='sample.txt',
                         help='file containing the corpus')        
-        parser.add_argument('--output_file', type=str, default='sample.txt',
+        parser.add_argument('--output_file', type=str, default='output.txt',
                         help='output to be stored')
 	hparams = parser.parse_args()
         return hparams
@@ -377,16 +379,18 @@ if __name__=="__main__":
       hparams.train_prefix = hparams.train_prefix.replace("train", "test")
       segment_file = hparams_local.segment_file
 
-      (englist, hilist) = getsentences(hparams_local.sample_sent)
+      (englist, hilist, indexlist) = getsentences(hparams_local.sample_sent)
       listsegment = getsegment(segment_file, englist)
       output_file = hparams_local.output_file
 
       count = 0
       i = 0
-      for (segments, engsentence, hindisentence) in zip(listsegment, englist, hilist):
-
+      for (segments, engsentence, hindisentence, index) in zip(listsegment, englist, hilist, indexlist):
+		count += 1
 		with open(hparams.train_prefix+"."+hparams.src, 'w') as f:
                         f.write(engsentence+'\n')
                 with open(hparams.train_prefix+"."+hparams.tgt, 'w') as f:
                         f.write(hindisentence+'\n')
-                getembeddings(hparams, segments, engsentence.split(), hindisentence.split(), idf_dict, idf_dict_hi, output_file)
+                getembeddings(hparams, segments, engsentence.split(), hindisentence.split(), idf_dict, idf_dict_hi, output_file, index)
+		#if count == 2:
+		#	break
